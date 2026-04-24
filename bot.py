@@ -1,70 +1,60 @@
-import telebot
-import yt_dlp
-import os
-import zipfile
-import shutil
+import telebot, yt_dlp, os, zipfile, shutil, threading
+from flask import Flask
 
+# Render Free Tier ke liye Flask server
+server = Flask(__name__)
+@server.route("/")
+def hello(): return "Tauseef Music Bot is Running!"
+
+# Aapka Bot Token
 BOT_TOKEN = '8336625978:AAEtTv5IuuuyMr_x7w3SJV00gv9hcDmv_EQ'
 bot = telebot.TeleBot(BOT_TOKEN)
 
 @bot.message_handler(regexp=r'(https?://)?(www\.)?youtube\.com/playlist\?list=.*')
 def download_playlist_zip(message):
-    url = message.text
-    chat_id = message.chat.id
-    msg = bot.reply_to(message, "⏳ Tauseef bhai, Playlist check kar raha hoon... thoda wait karein.")
-
-    folder_name = f"playlist_{chat_id}"
-    os.makedirs(folder_name, exist_ok=True)
-
-    # Virtual DJ ke liye 320kbps M4A aur Album Art ki settings
+    url, chat_id = message.text, message.chat.id
+    msg = bot.reply_to(message, "⏳ Tauseef bhai, Playlist check ho rahi hai... thoda wait karein.")
+    folder = f"playlist_{chat_id}"
+    if not os.path.exists(folder): os.makedirs(folder)
+    
+    # Virtual DJ ke liye High Quality Settings
     ydl_opts = {
         'format': 'bestaudio[ext=m4a]/best',
-        'outtmpl': f'{folder_name}/%(title)s.%(ext)s',
+        'outtmpl': f'{folder}/%(title)s.%(ext)s',
         'writethumbnail': True,
         'postprocessors': [
             {'key': 'FFmpegExtractAudio', 'preferredcodec': 'm4a', 'preferredquality': '320'},
-            {'key': 'EmbedThumbnail'},
-            {'key': 'FFmpegMetadata'},
+            {'key': 'EmbedThumbnail'}, 
+            {'key': 'FFmpegMetadata'}
         ],
-        'ignoreerrors': True,
-        'quiet': True,
-        'no_warnings': True
+        'ignoreerrors': True, 'quiet': True
     }
-
+    
     try:
-        bot.edit_message_text("🎧 Gane high-quality m4a (Virtual DJ Ready!) mein download ho rahe hain...", chat_id=chat_id, message_id=msg.message_id)
-        
+        bot.edit_message_text("🎧 Gane high-quality m4a mein download ho rahe hain...", chat_id, msg.message_id)
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=True)
-            playlist_title = info_dict.get('title', 'Tauseef_Music_Playlist').replace(" ", "_")
-
-        bot.edit_message_text("📦 Download poora hua! Ab ZIP file bana raha hoon...", chat_id=chat_id, message_id=msg.message_id)
-
-        zip_filename = f"{playlist_title}.zip"
-        with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for root, _, files in os.walk(folder_name):
-                for file in files:
-                    if file.endswith('.m4a'):
-                        file_path = os.path.join(root, file)
-                        zipf.write(file_path, os.path.basename(file_path))
-
-        bot.edit_message_text("🚀 ZIP taiyar hai, bhej raha hoon...", chat_id=chat_id, message_id=msg.message_id)
+            info = ydl.extract_info(url, download=True)
+            title = info.get('title', 'Tauseef_Playlist').replace(" ", "_")
         
-        with open(zip_filename, 'rb') as doc:
-            bot.send_document(
-                chat_id, 
-                doc, 
-                caption=f"🎧 Playlist: **{playlist_title}**\n💿 Format: M4A (320kbps)\n🖼️ Thumbnail: Embedded\n\n- Tauseef Music ATS"
-            )
+        bot.edit_message_text("📦 ZIP file ban rahi hai...", chat_id, msg.message_id)
+        zip_n = f"{title}.zip"
+        with zipfile.ZipFile(zip_n, 'w', zipfile.ZIP_DEFLATED) as z:
+            for r, d, f in os.walk(folder):
+                for file in f:
+                    if file.endswith('.m4a'): 
+                        z.write(os.path.join(r, file), file)
         
+        with open(zip_n, 'rb') as doc:
+            bot.send_document(chat_id, doc, caption=f"💿 {title}\n- Tauseef Music ATS")
         bot.delete_message(chat_id, msg.message_id)
-
+        
     except Exception as e:
-        bot.edit_message_text(f"❌ Error aaya: {str(e)}", chat_id=chat_id, message_id=msg.message_id)
-
+        bot.edit_message_text(f"❌ Error: {str(e)}", chat_id, msg.message_id)
     finally:
-        shutil.rmtree(folder_name, ignore_errors=True)
-        if os.path.exists(zip_filename):
-            os.remove(zip_filename)
+        shutil.rmtree(folder, ignore_errors=True)
+        if os.path.exists(zip_n): os.remove(zip_n)
 
-bot.infinity_polling()
+if __name__ == "__main__":
+    # Bot aur Server ek sath chalu karne ke liye
+    threading.Thread(target=lambda: bot.infinity_polling()).start()
+    server.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
