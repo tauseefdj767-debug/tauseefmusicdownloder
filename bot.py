@@ -4,10 +4,10 @@ from flask import Flask
 # Render Free Tier ke liye Flask server
 server = Flask(__name__)
 @server.route("/")
-def hello(): return "Tauseef Music Bot is Running!"
+def hello(): return "DJ Tauseef Bot is Live!"
 
-# Aapka Bot Token
-BOT_TOKEN = '8336625978:AAEtTv5IuuuyMr_x7w3SJV00gv9hcDmv_EQ'
+# 1. Yahan apna naya Token daliye (BotFather wala)
+BOT_TOKEN = '8336625978:AAFh-SR6axF9XZtKV73-EPc39FLaT83VUNA'
 bot = telebot.TeleBot(BOT_TOKEN)
 
 @bot.message_handler(regexp=r'(https?://)?(www\.)?youtube\.com/playlist\?list=.*')
@@ -17,7 +17,7 @@ def download_playlist_zip(message):
     folder = f"playlist_{chat_id}"
     if not os.path.exists(folder): os.makedirs(folder)
     
-    # Virtual DJ ke liye High Quality Settings
+    # Virtual DJ ke liye High Quality Settings (320kbps m4a)
     ydl_opts = {
         'format': 'bestaudio[ext=m4a]/best',
         'outtmpl': f'{folder}/%(title)s.%(ext)s',
@@ -55,6 +55,6 @@ def download_playlist_zip(message):
         if os.path.exists(zip_n): os.remove(zip_n)
 
 if __name__ == "__main__":
-    # Bot aur Server ek sath chalu karne ke liye
+    # Bot aur Server dono ko ek sath chalu karne ke liye
     threading.Thread(target=lambda: bot.infinity_polling()).start()
     server.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
