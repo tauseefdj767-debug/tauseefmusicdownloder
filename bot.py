@@ -6,7 +6,7 @@ server = Flask(__name__)
 def hello(): return "DJ Tauseef Bot is Live!"
 
 BOT_TOKEN = '8336625978:AAFH-SR6axF8X2kY73_EPc39FiaT8JVUMA'
-bot = telebot.TeleBot(BOT_TOKEN)
+bot = telebot.TeleBot(8336625978:AAFOs3dVnrY2vDBed24WzX3Qk5p1h2UEmEU)
 
 @bot.message_handler(regexp=r'(https?://)?(www\.)?youtube\.com/playlist\?list=.*')
 def download_playlist_zip(message):
